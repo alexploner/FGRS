@@ -1,6 +1,6 @@
 #' setup_exampledata.R
 #'
-#' Adds a small artificial data set with individual level data, for testing and
+#' Adds some small artificial data sets with individual level data, for testing and
 #' demo purposes. The format builds and expands on what is described in the appendix
 #' to the original publication (Columns 1-7)
 #'
@@ -26,6 +26,12 @@ relatives_template <- data.frame(
   RelativeType = character(0)
 )
 
+#' Example 1: same diagnosis for probands and relatives
+#' ====================================================
+
+#' This is more basic in that we assume we track the same diagnosis (e.g. SZ) in
+#' both probands and relatives
+
 demo_probands  <- probands_template
 demo_relatives <- relatives_template
 
@@ -48,16 +54,36 @@ demo_relatives[8, ] <- list(2,  3, 0.5,   1971, 2, 1989, 42.72, "Sib")
 
 #' Proband 3 is sister of Proband 2: same relatives, except with brother substituted
 demo_probands[3, ]  <- list(3, 1971, 2, 1989, 42.72, NA)
-demo_relatives[ 9, ] <- list(3, 21, 0.5,   1938, 1,   NA, 75.12, "F")
-demo_relatives[10, ] <- list(3, 22, 0.5,   1944, 2,   NA, 69.55, "M")
-demo_relatives[11, ] <- list(3, 23, 0.25,  1970, 2,   NA, 43.00, "Cousin")
-demo_relatives[12, ] <- list(3, 24, 0.125, 1980, 1,   NA, 33.32, "Cousin2")
+demo_relatives[ 9, ] <- list(3, 31, 0.5,   1938, 1,   NA, 75.12, "F")
+demo_relatives[10, ] <- list(3, 32, 0.5,   1944, 2,   NA, 69.55, "M")
+demo_relatives[11, ] <- list(3, 33, 0.25,  1970, 2,   NA, 43.00, "Cousin")
+demo_relatives[12, ] <- list(3, 34, 0.125, 1980, 1,   NA, 33.32, "Cousin2")
 demo_relatives[13, ] <- list(3,  2, 0.5,   1968, 2, 1988, 45.88, "Sib")
 
+#' Proband 4: f, has sib, cousin, cousin2, cousin3, one son, all without diagnosis
+#' FIXME: add
+
+#' Combine
+ex1 <- list(probands = demo_probands, relatives = demo_relatives)
 
 
-4: f,m, sib with diag, cousin, cousin2, cousin3
-5: is sib of 4, has same relatives f, m, sib with diag (=4), cousin, cousin2, cousin3
+#' Example 2: different diagnosis for probands and relatives
+#' =========================================================
+
+#' This is the more general case where we track a different diagnosis in
+#' probands (say SZ) than in relatives (say BD). Note that with comorbidity,
+#' we will still have cases where a person is both proband and relative.
+#'
+
+
+
+
+#' Store example data
+#' ==================
+
+usethis::use_data(ex1, internal = FALSE)
+
+
 
 
 
