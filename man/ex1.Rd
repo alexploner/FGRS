@@ -15,7 +15,7 @@ A small synthetic data set that tracks the same diagnosis in both
 probands and relatives
 }
 \details{
-\preformatted{FIXME
-}
+\if{html}{\out{<div class="sourceCode">}}\preformatted{FIXME
+}\if{html}{\out{</div>}}
 }
 \keyword{datasets}

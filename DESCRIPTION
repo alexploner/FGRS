@@ -5,11 +5,13 @@ Authors@R:
     person("Alexander", "Ploner", , "alexander.ploner@ki.se", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0002-5042-8326"))
 Description: Calculate the family genetic risk score as descibed in Kendler et al. 
-    <https://doi.org/10.1017/S0033291721004268>
+    <https://doi.org/10.1017/S0033291721004268>.
 License: GPL (>= 3)
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.2.1
 Depends: 
     R (>= 2.10)
+Imports:
+    dplyr
 LazyData: true
