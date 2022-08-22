@@ -69,7 +69,7 @@ FGRS <- function(probands, relatives, proband_diag = "SZ", relatives_diag = "SZ"
                                 )
 
   ## Step 4: Calculate the pre-relative weight as product
-  reldat$weight <- with(reldat, age_weight * period_weight * cohab_weight)
+  reldat$weight <- with(reldat, age_weight * period_weight * cohab_weight * SharedGenetics)
 
   ## Step 5: Aggregate over probands, link aggregates back to probands
   aggw <- group_by(reldat, ProbandID) %>% summarise(weight=mean(weight), nrel=n())
