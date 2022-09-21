@@ -24,8 +24,8 @@ FGRS <- function(probands, relatives, proband_diag = "SZ", relatives_diag = "SZ"
   ## Hard-coded data definitions FIXME: S3 class or similar?
   stopifnot( colnames(probands)  == colnames(FGRS::ex1$probands) )
   stopifnot( colnames(relatives) == colnames(FGRS::ex1$relatives) )
-  stopifnot( proband_diag == "SZ")
-  stopifnot( relatives_diag == "SZ")
+  stopifnot( proband_diag %in% fgrs_diseases)
+  stopifnot( relatives_diag %in% fgrs_diseases)
 
   ## Note: weight calculations for relatives are naive, i.e. we calculate
   ## separately per row of data (ignoring the fact that relatives can appear
@@ -79,16 +79,21 @@ FGRS <- function(probands, relatives, proband_diag = "SZ", relatives_diag = "SZ"
   probdat$shrink_fac <- fgrs_const[[relatives_diag]]$shrink_nrel(probdat$nrel)
   probdat$weight_adj <- probdat$weight * probdat$shrink_fac
 
-  ## Step 7: standardize by county of longest residence and year (decade?) of
-  ## birth
+  ## Step 7: standardize by birth year
   ##
-  ## We could do internal scaling (using the cohort at hand only), but that seems
-  ## inefficient (we have been the full cohort marginal so far); also, this is
-  ## reported as "birth year", when birth decade seems more likely -> skip for now
-  ## FIXME: contact authors
+  ## This is a slight variant of the original algorithm, which standardized
+  ## by both birth year and county of longest residence. However, sensitivity
+  ## analyses reported in the supplement (eTable 7) show extremely high
+  ## correlation with the original score when using only YoB standardisation,
+  ## as well as slightly higher AUC for both SZ and BD, so after consultation
+  ## with Henrik O, were are going with this simpler standardisation
+  ndx <- match(probdat$BirthYear, fgrs_standconst[[proband_diag]]$Byear)
+  stopifnot( !any(is.na(ndx)) )
+  probdat$weight_adj_std <- with( fgrs_standconst[[proband_diag]],
+                                  (probdat$weight_adj - Mean[ndx]) / STD[ndx] )
 
   ## Reduce, resort data frames for output
-  probdat <- probdat[, c(colnames(probands), "nrel", "weight", "shrink_fac", "weight_adj")]
+  probdat <- probdat[, c(colnames(probands), "nrel", "weight", "shrink_fac", "weight_adj", "weight_adj_std")]
   reldat  <- reldat[, c(colnames(relatives), "age_weight", "period_weight", "cohab_weight", "weight")]
 
   ## Return
