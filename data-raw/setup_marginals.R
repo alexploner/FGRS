@@ -19,7 +19,7 @@ library(truncnorm)  ## Required for mean from truncated normals
 library(plyr)
 
 #' List of diseases currently supported
-fgrs_diseases <- "SZ"
+fgrs_diseases <- c("SZ", "BD")
 ndis <- length(fgrs_diseases)
 
 #' Mapping of borth decades to years
@@ -36,12 +36,14 @@ fgrs_decades <- data.frame(Start = breaks[-(ndecad+1)], End = breaks[-1], BirthD
 #'   in the appendix)
 fgrs_const <- list(
   SZ = list(cohab  = list(parent_child = 0.93, sibling = 0.84),
-            shrink_nrel = function(nrel) {0.00222 / (0.00222 + 0.00249062/nrel)} )
+            shrink_nrel = function(nrel) {0.00222 / (0.00222 + 0.00249062/nrel)} ),
+  BD = list(cohab  = list(parent_child = 0.67, sibling = 0.77),
+            shrink_nrel = function(nrel) {0.00162265 / (0.00162265 + 0.00456254/nrel)} )
 )
 
 #' Initialize containers for larger data (read from file)
 fgrs_cuminc <- vector("list", ndis)
-names(fgrs_cuminc) <- diseases
+names(fgrs_cuminc) <- fgrs_diseases
 fgrs_meanliab <- fgrs_cuminc
 
 #' Loop over diseases: read the cumulative incidences and mean liabilities from file
@@ -73,4 +75,4 @@ for (d in fgrs_diseases) {
 
 #' Add the generated objects to the package
 usethis::use_data(fgrs_diseases, fgrs_decades, fgrs_const, fgrs_cuminc,
-                  fgrs_meanliab, internal = TRUE)
+                  fgrs_meanliab, internal = TRUE, overwrite = TRUE)
