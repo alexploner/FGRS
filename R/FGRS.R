@@ -45,11 +45,19 @@ FGRS <- function(probands, relatives, proband_diag = "SZ", relatives_diag = "SZ"
   ## Step 1: weight based on age at end of follow-up (for relatives
   ## without diagnosis)
   ##
-  ## FIXME: there are questions wrt the definition and the marginal data for
-  ## this step that need to be clarified with the original authors.
-  ## I set this to 0.01 as a place-holder for non-cases (and 1 for cases, as
-  ## per spec)
-  reldat$age_weight <- ifelse( reldat$HasDiag, 1.0, 0.01)
+  ## Relatives with their own diagnosis always get weight one; relatives without
+  ## diagnosis get as weight the cumulative incidence of the disease at their
+  ## age at end of follow-up, with a shift in age distribution for relatives born
+  ## before 1958
+  match_age <- with(reldat, ifelse(BirthYear >= 1958, AgeEOF, AgeEOF - (BirthYear - 1958)))
+  ## FIXME: we round the age at end of follow-up here to get integers; this is
+  ## because the generic example data uses fractional ages, but it's not clear
+  ## whether the original ages were rounded or truncated - probably the latter...
+  ## ... does it make a difference?
+  match_age <- round(match_age)
+  ndx <- match(match_age, fgrs_cuminc[[relatives_diag]]$Age)
+  stopifnot( !any(is.na(ndx)) )
+  reldat$age_weight <- ifelse( reldat$HasDiag, 1.0, fgrs_cuminc[[relatives_diag]]$PropDiag[ndx] )
 
   ## Step 2: liability weight based on period effects (birth decade)
   ##
