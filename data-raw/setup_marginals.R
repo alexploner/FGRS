@@ -22,7 +22,7 @@ library(plyr)
 fgrs_diseases <- c("SZ", "BD")
 ndis <- length(fgrs_diseases)
 
-#' Mapping of borth decades to years
+#' Mapping of birth decades to years
 breaks <- c(-Inf, seq(1930, 1990, by = 10), 2015)
 ndecad <- length(breaks) - 1
 fgrs_decades <- data.frame(Start = breaks[-(ndecad+1)], End = breaks[-1], BirthDecade = 1:ndecad)
@@ -44,7 +44,7 @@ fgrs_const <- list(
 #' Initialize containers for larger data (read from file)
 fgrs_cuminc <- vector("list", ndis)
 names(fgrs_cuminc) <- fgrs_diseases
-fgrs_meanliab <- fgrs_cuminc
+fgrs_standconst <- fgrs_meanliab <- fgrs_cuminc
 
 #' Loop over diseases: read the cumulative incidences and mean liabilities from file
 for (d in fgrs_diseases) {
@@ -52,6 +52,7 @@ for (d in fgrs_diseases) {
   ## Set up file names
   f_ci <- file.path("data-raw", d, paste0("cuminc_diag_", d, ".txt"))
   f_ml <- file.path("data-raw", d, paste0("liability_threshold_", d, ".txt"))
+  f_sc <- file.path("data-raw", d, paste0("MeanSTD_", d, ".txt"))
 
   ## Read cumulative incidence
   fgrs_cuminc[[d]] <- read.table(f_ci, header = TRUE, sep ="\t")
@@ -69,10 +70,11 @@ for (d in fgrs_diseases) {
   ml$HasDiag <- as.numeric( as.character( ml$HasDiag) )
   fgrs_meanliab[[d]] <- ml
 
-  ## FIXME: read the scaling constants (county, birth year/decade?)
+  ## Read standardisation constants (mean, stddev) for scores by birthyear
+  fgrs_standconst[[d]] <- read.table(f_sc, header = TRUE, sep ="\t")
 
 }
 
 #' Add the generated objects to the package
 usethis::use_data(fgrs_diseases, fgrs_decades, fgrs_const, fgrs_cuminc,
-                  fgrs_meanliab, internal = TRUE, overwrite = TRUE)
+                  fgrs_meanliab, fgrs_standconst, internal = TRUE, overwrite = TRUE)

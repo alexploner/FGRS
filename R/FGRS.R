@@ -79,7 +79,7 @@ FGRS <- function(probands, relatives, proband_diag = "SZ", relatives_diag = "SZ"
   probdat$shrink_fac <- fgrs_const[[relatives_diag]]$shrink_nrel(probdat$nrel)
   probdat$weight_adj <- probdat$weight * probdat$shrink_fac
 
-  ## Step 7: standardize by county of longes residence and year (decade?) of
+  ## Step 7: standardize by county of longest residence and year (decade?) of
   ## birth
   ##
   ## We could do internal scaling (using the cohort at hand only), but that seems
