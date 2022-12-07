@@ -108,18 +108,62 @@ FGRS <- function(probands, relatives, proband_diag = "SZ", relatives_diag = "SZ"
   list(probands = probdat, relatives = reldat)
 }
 
+#' Check a data frame of probands or relatives for correctness
+#'
+#' Given data frames that contain information on either probands or relatives
+#' as required by function `FGRS`, this function runs some minimal checks on
+#' correctness and returns the subset of coumns required to calculate the FGRS.
+#'
+#' @seealso \code{\link[FGRS]{FGRS}}
+check_probands <- function(x, id = "ProbandID", byear = "BirthYear")
+{
+  ## Checks: data frame with unique IDs, numeric and positive birth years
+  stopifnot( is.data.frame(x) )
+  stopifnot( !any(duplicated(x[, id])) )
+  stopifnot( is.numeric(x[, byear]) )
+  stopifnot( all(x[, byear] > 0) )
 
+  ## Extract
+  x <- x[, c(id, byear)]
+  colnames(x) <- c("ProbandID", "BirthYear")
 
-#' Example data for FGRS calculation
-#'
-#' A small synthetic data set that tracks the same diagnosis in both
-#' probands and relatives
-#'
-#' @name ex1
-#' @docType data
-#' @format A list with two data frames, `probands` and `relatives`
-#' @details
-#'     FIXME
-#'
-"ex1"
+  x
+}
+
+#' @rdname check_probands
+check_relatives <- function(x, id = "ProbandID", id2 = "RelativeID",
+                            sex = "Sex", byear = "BirthYear", dyear = "DiagYear",
+                            age = "AgeEOF", reltyp = "RelType",
+                            gensh = "SharedGenetics")
+{
+  ## Checks
+  stopifnot( is.data.frame(x) )
+
+  ## Unique relative ID per proband
+  tmp <- tapply(x[, id2], x[, id], function(x) !any(duplicated(x)))
+  stopifnot( all(tmp) )
+
+  stopifnot( is.numeric(x[, byear]) )
+  stopifnot( all(x[, byear] > 0) )
+
+  stopifnot( is.numeric(x[, dyear]) )
+  ndx <- !is.na(x[, dyear])
+  stopifnot( all(x[ndx, dyear] > 0) )
+  stopifnot( all(x[ndx, dyear] >= x[ndx, byear]) )
+
+  stopifnot( is.numeric(x[, age]) )
+  stopifnot( all(x[, age] > 0) )
+
+  ## Missing: controlled vocabulary for RelType
+
+  stopifnot( is.numeric(x[, gensh]) )
+  stopifnot( all(x[, gensh] > 0 & x[, gensh]<=1) )
+
+  ## Missing: compare RelType and SharedGenetics
+
+  x <- x[ c(id, id2, sex, byear, dyear, age, reltyp, gensh)]
+  colnames(x) <- c("ProbandID", "RelativeID", "Sex", "BirthYear", "DiagYear",
+                   "AgeEOF", "RelType", "SharedGenetics")
+  x
+}
 
