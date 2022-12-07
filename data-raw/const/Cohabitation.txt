@@ -1,0 +1,10 @@
+phenotype	parent_child	siblings
+"MD"	0.80	0.85
+"AD"	0.87	0.81
+"BD"	0.67	0.77
+"SZ"	0.93	0.84
+"AUD"	0.99	0.69
+"DUD"	0.92	0.52
+"ADHD"	0.42	0.81
+"ASD"	0.83	0.61
+"OCD"	0.79	0.74

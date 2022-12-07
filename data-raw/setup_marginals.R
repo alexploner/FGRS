@@ -18,63 +18,85 @@
 library(truncnorm)  ## Required for mean from truncated normals
 library(plyr)
 
+#' Read class definitions from main R line
+source("R/FGRS_classes.R")
+
 #' List of diseases currently supported
-fgrs_diseases <- c("SZ", "BD")
-ndis <- length(fgrs_diseases)
+FGRS_phenotypes <- c(SZ = "Schizophrenia", BD = "Bipolar Disorder")
+npheno <- length(FGRS_phenotypes)
+
+#' Local helper function: read a table of small constants, set up for easy
+#' extraction
+get_constants <- function(fn)
+{
+  fn  <- file.path("data-raw/const", fn)
+  ret <- read.table(fn, header = TRUE, sep = "\t")
+  rownames(ret) <- ret$phenotype
+  ret[names(FGRS_phenotypes), ]
+}
+
+#' Local helper function: read all files related to a phenotype
+get_pheno_data <- function(code)
+{
+  ## Set up file names
+  f_ci <- file.path("data-raw", code, paste0("cuminc_diag_", code, ".txt"))
+  f_ml <- file.path("data-raw", code, paste0("liability_threshold_", code, ".txt"))
+  f_sc <- file.path("data-raw", code, paste0("MeanSTD_", code, ".txt"))
+
+  ## Read cumulative incidence
+  ret <- list()
+  ret$cuminc     <- read.table(f_ci, header = TRUE, sep ="\t")
+  ret$meanliab   <- read.table(f_ml, header = TRUE, sep ="\t")
+  ret$standconst <- read.table(f_sc, header = TRUE, sep ="\t")
+
+  ret
+}
 
 #' Mapping of birth decades to years
 breaks <- c(-Inf, seq(1930, 1990, by = 10), 2015)
 ndecad <- length(breaks) - 1
-fgrs_decades <- data.frame(Start = breaks[-(ndecad+1)], End = breaks[-1], BirthDecade = 1:ndecad)
+FGRS_decades <- data.frame(Start = breaks[-(ndecad+1)], End = breaks[-1], BirthDecade = 1:ndecad)
 
-#' Initialize some small constants for each disease:
+#' Read in small constants for cohabitation, family size
 #'
-#' * Shrinkage factors for cohabitation effects (Table 2/Step 3 in the appendix)
-#' * Shrinkage factor adjusting for number of relatives: this is directly implemented
-#'   as a function with two numerical constants extracted from the SAS code, where the
-#'   argument `nrel` is the weighted number of relatives for a proband (Table 2/Step 6
-#'   in the appendix)
-fgrs_const <- list(
-  SZ = list(cohab  = list(parent_child = 0.93, sibling = 0.84),
-            shrink_nrel = function(nrel) {0.00222 / (0.00222 + 0.00249062/nrel)} ),
-  BD = list(cohab  = list(parent_child = 0.67, sibling = 0.77),
-            shrink_nrel = function(nrel) {0.00162265 / (0.00162265 + 0.00456254/nrel)} )
-)
+#' * Correction factors for cohabitation effects, directly taken from
+#'   Table 2/Step 3 in the appendix of Kendler et al. 2021
+#'
+#' * Shrinkage factor adjusting for number of relatives: from the SAS code,
+#'   definition as described in Table 2/Step 6
+cohab  <- get_constants("Cohabitation.txt")
+shrink <- get_constants("Shrinkage.txt")
 
-#' Initialize containers for larger data (read from file)
-fgrs_cuminc <- vector("list", ndis)
-names(fgrs_cuminc) <- fgrs_diseases
-fgrs_standconst <- fgrs_meanliab <- fgrs_cuminc
+#' Read the marginal distribution data. This is currently done manually instead
+#' of a loop, as there are only few phenotypes, some of which require
+#' manual adjustment of the data
 
-#' Loop over diseases: read the cumulative incidences and mean liabilities from file
-for (d in fgrs_diseases) {
+#' Schizophrenia
+tmp <- get_pheno_data("SZ")
+#' Non-monotonous cumulative incidence, see
+#' library(ggplot)
+#' ggplot(tmp$cuminc, aes(x=Age, y = PropDiag, linetype = factor(Sex), group = Sex)) + geom_line()
+#'
+#' Fix this: simple cumulative max
+tmp$cuminc$PropDiag <- with(tmp$cuminc, unlist(tapply(PropDiag, Sex, cummax)))
+#' Do the object
+SZpopdata <- FGRS_data$new(name              = "SZ",
+                           birth_decades     = FGRS_decades,
+                           age_case_cuminc   = tmp$cuminc,
+                           bdecade_liability = tmp$meanliab,
+                           byear_standard    = tmp$standconst,
+                           cohab             = unlist(cohab["SZ", 2:3]),
+                           shrinkage         = unlist(shrink["SZ", 2:3]))
 
-  ## Set up file names
-  f_ci <- file.path("data-raw", d, paste0("cuminc_diag_", d, ".txt"))
-  f_ml <- file.path("data-raw", d, paste0("liability_threshold_", d, ".txt"))
-  f_sc <- file.path("data-raw", d, paste0("MeanSTD_", d, ".txt"))
-
-  ## Read cumulative incidence
-  fgrs_cuminc[[d]] <- read.table(f_ci, header = TRUE, sep ="\t")
-
-  ## Read liability thresholds
-  lt <- read.table(f_ml, header = TRUE, sep ="\t")
-  ## Calculate the corresponding prevalences (for inspection only)
-  lt$Prev <- pnorm(lt$LiabThresh, lower.tail = FALSE)
-
-  ## Calculate mean liabilities for cases / controls based on liability thresholds
-  ml <- list("0" = transform(lt, MeanLiab = truncnorm::etruncnorm(a = -Inf, b = LiabThresh)),
-             "1" = transform(lt, MeanLiab = truncnorm::etruncnorm(a = LiabThresh, b = Inf))
-             )
-  ml <- plyr::ldply(ml, .id = "HasDiag")
-  ml$HasDiag <- as.numeric( as.character( ml$HasDiag) )
-  fgrs_meanliab[[d]] <- ml
-
-  ## Read standardisation constants (mean, stddev) for scores by birthyear
-  fgrs_standconst[[d]] <- read.table(f_sc, header = TRUE, sep ="\t")
-
-}
+#' Bipolar disorder
+tmp <- get_pheno_data("BD")
+BDpopdata <- FGRS_data$new(name              = "BD",
+                           birth_decades     = FGRS_decades,
+                           age_case_cuminc   = tmp$cuminc,
+                           bdecade_liability = tmp$meanliab,
+                           byear_standard    = tmp$standconst,
+                           cohab             = unlist(cohab["BD", 2:3]),
+                           shrinkage         = unlist(shrink["BD", 2:3]))
 
 #' Add the generated objects to the package
-usethis::use_data(fgrs_diseases, fgrs_decades, fgrs_const, fgrs_cuminc,
-                  fgrs_meanliab, fgrs_standconst, internal = TRUE, overwrite = TRUE)
+usethis::use_data(FGRS_phenotypes, SZpopdata, BDpopdata, overwrite = TRUE)
