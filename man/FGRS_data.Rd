@@ -39,7 +39,7 @@ Step 1 (note: cumulative incidences stored here are \emph{not} adjusted
 for registration effects).
 
 \if{html}{\out{<div class="sourceCode">}}\preformatted{   * `Age`: age at diagnosis
-   * `PropDiag`: proportion of cases diagnosed before or at the 
+   * `PropDiag`: proportion of cases diagnosed before or at the
                  corresponding age
    * `Sex`: indicator for sex (1 = male, 2 = female)
 }\if{html}{\out{</div>}}}
@@ -49,21 +49,21 @@ mean libability for the disease of interest by birth decade, sex and
 disease status at end of follow-up; ; see Kendler et al. 2021(b),
 Supplemental Table 2, Step 2.
 
-\if{html}{\out{<div class="sourceCode">}}\preformatted{   * `BirthDecade`: numerical code for birth decade, as defined by 
+\if{html}{\out{<div class="sourceCode">}}\preformatted{   * `BirthDecade`: numerical code for birth decade, as defined by
                     field `BirthDecade`
    * `Sex`: indicator for sex (1 = male, 2 = female)
-   * `HasDiag`: indicator for disease status at end of follow-up (0 = 
+   * `HasDiag`: indicator for disease status at end of follow-up (0 =
                 no diagnosis, 1 = diagnosed case)
-   * `MeanLiab`: the estimated mean liability for disease for the 
+   * `MeanLiab`: the estimated mean liability for disease for the
                  recorded combination of borth decade, sex and disease
                  status (via a truncated normal distribution)
-   * `LiabThresh`: the liability threshold between undiagnosed subjects 
-                   and diagnosed subjects, based on the observed 
+   * `LiabThresh`: the liability threshold between undiagnosed subjects
+                   and diagnosed subjects, based on the observed
                    prevalence; uniquely defines mean liability for cases
                    and controls, but only included for description.
-   * `Prev`: the observed prevalence of the disease for subjects with 
+   * `Prev`: the observed prevalence of the disease for subjects with
              the recorded combination of birth decade and sex; uniquely
-             defines mean liability for cases and controls, but only 
+             defines mean liability for cases and controls, but only
              included for description.
 }\if{html}{\out{</div>}}}
 
@@ -72,7 +72,7 @@ storing the correction factors for cohabitation effects (shared
 environment) for parent-child and sibling-sibling relationships;
 see Kendler et al. 2021(b), Supplemental Table 2, Step 3.}
 
-\item{\code{shrinkage_factor_A, shrinkage_factor_B}}{Numerical vectors of length one,
+\item{\code{shrinkage_A, shrinkage_B}}{Numerical vectors of length one,
 holding the correction factors for the number of relatives (family
 size) recorded for a proband; see Kendler et al. 2021(b),
 Supplemental Table 2, Step 6.}
@@ -98,7 +98,7 @@ storing the correction factors for cohabitation effects (shared
 environment) for parent-child and sibling-sibling relationships;
 see Kendler et al. 2021(b), Supplemental Table 2, Step 3.}
 
-\item{\code{shrinkage_factor_A, shrinkage_factor_B}}{Numerical vectors of length one,
+\item{\code{shrinkage_A, shrinkage_B}}{Numerical vectors of length one,
 holding the correction factors for the number of relatives (family
 size) recorded for a proband; see Kendler et al. 2021(b),
 Supplemental Table 2, Step 6.}
@@ -113,6 +113,7 @@ Supplemental Table 2, Step 6.}
 \item \href{#method-FGRS_data-get_disease_liability}{\code{FGRS_data$get_disease_liability()}}
 \item \href{#method-FGRS_data-get_cohab_corrfac}{\code{FGRS_data$get_cohab_corrfac()}}
 \item \href{#method-FGRS_data-get_famsize_corrfac}{\code{FGRS_data$get_famsize_corrfac()}}
+\item \href{#method-FGRS_data-standardize_fgrs}{\code{FGRS_data$standardize_fgrs()}}
 \item \href{#method-FGRS_data-clone}{\code{FGRS_data$clone()}}
 }
 }
@@ -269,7 +270,7 @@ Here, only values \code{M} (mother), \code{F} (father) and \code{SI}
 \subsection{Method \code{get_famsize_corrfac()}}{
 Correction factor for family size
 
-Combining libability, age weights, cohabitation correction factor and
+Combining liability, age weights, cohabitation correction factor and
 degree of relatedness and averaging them across probands for a first
 estimate of FGRS will be biased towards larger families. This function
 returns a suitable shrinkage factor.
@@ -283,6 +284,28 @@ returns a suitable shrinkage factor.
 \item{\code{nrel}}{Numeric vector containing the weighted number of relatives, where
 each relative is multipled by the degree of relatedness to the
 proband before summation}
+}
+\if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-FGRS_data-standardize_fgrs"></a>}}
+\if{latex}{\out{\hypertarget{method-FGRS_data-standardize_fgrs}{}}}
+\subsection{Method \code{standardize_fgrs()}}{
+Standardize FGRS value by birth year of proband
+
+The aggregated and shrunk (for family size) FGRS values are additionally
+standardized (mean/stddev) per birth year of the proband.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{FGRS_data$standardize_fgrs(x, byear)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{x}}{numeric, a vector of shrunk FGRS values}
+
+\item{\code{byear}}{numeric, the vector of birth years for the probands}
 }
 \if{html}{\out{</div>}}
 }

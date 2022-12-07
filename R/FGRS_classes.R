@@ -72,12 +72,12 @@ FGRS_data <- R6::R6Class("FGRS_data", public = list(
   cohab_parent_child = NULL,
   cohab_sibling = NULL,
 
-  #' @field shrinkage_factor_A,shrinkage_factor_B Numerical vectors of length one,
+  #' @field shrinkage_A,shrinkage_B Numerical vectors of length one,
   #'        holding the correction factors for the number of relatives (family
   #'        size) recorded for a proband; see Kendler et al. 2021(b),
   #'        Supplemental Table 2, Step 6.
-  shrinkage_factor_A = NULL,
-  shrinkage_factor_B = NULL,
+  shrinkage_A = NULL,
+  shrinkage_B = NULL,
 
   #' @field byear_standard Data frame with three numerical columns, for
   #'        standardizing the calculated FGRS values by birth year of the
@@ -161,6 +161,8 @@ FGRS_data <- R6::R6Class("FGRS_data", public = list(
     self$byear_standard  <- byear_standard
     self$cohab_parent_child <- cohab[["parent_child"]]
     self$cohab_sibling      <- cohab[["siblings"]]
+    self$shrinkage_A        <- shrinkage["A"]
+    self$shrinkage_B        <- shrinkage["B"]
 
     ## Expand the mean liabilities to cases and controls: mean libability
     ## above and below the threshold
@@ -242,16 +244,15 @@ FGRS_data <- R6::R6Class("FGRS_data", public = list(
   get_disease_liability = function(byear, sex, has_diag)
   {
     ## Turn birth year into birth decade
-    ## FIXME: makes this an external function
+    ## FIXME: make this an external function
     brks    <- c(self$birth_decades$Start[1], self$birth_decades$End)
     ndx     <- findInterval(byear, brks, left.open = TRUE)
     bdecade <- self$birth_decades$BirthDecade[ndx]
 
     ## Create a temproray df to use merge (I know...)
     tmp  <- data.frame(Sex = sex, HasDiag = has_diag, BirthDecade = bdecade)
-    tmp2 <- merge(tmp, self$birth_decades[, -(4:5)],
-                  by = c("Sex", "HasDiag", "BirthDecade"),
-                  sort = FALSE)
+    tmp2 <- dplyr::left_join(tmp, self$bdecade_liability[, -(5:6)],
+                  by = c("Sex", "HasDiag", "BirthDecade"))
 
     tmp2$MeanLiab
   },
@@ -275,7 +276,7 @@ FGRS_data <- R6::R6Class("FGRS_data", public = list(
 
   #' @description Correction factor for family size
   #'
-  #' Combining libability, age weights, cohabitation correction factor and
+  #' Combining liability, age weights, cohabitation correction factor and
   #' degree of relatedness and averaging them across probands for a first
   #' estimate of FGRS will be biased towards larger families. This function
   #' returns a suitable shrinkage factor.
@@ -286,6 +287,20 @@ FGRS_data <- R6::R6Class("FGRS_data", public = list(
   get_famsize_corrfac = function(nrel)
   {
     self$shrinkage_B/(self$shrinkage_B + self$shrinkage_A/nrel)
+  },
+
+  #' @description Standardize FGRS value by birth year of proband
+  #'
+  #' The aggregated and shrunk (for family size) FGRS values are additionally
+  #' standardized (mean/stddev) per birth year of the proband.
+  #'
+  #' @param x numeric, a vector of shrunk FGRS values
+  #' @param byear numeric, the vector of birth years for the probands
+  standardize_fgrs = function(x, byear)
+  {
+    ndx <- match(byear, self$byear_standard$Byear)
+    stopifnot( !any(is.na(ndx)) )
+    with(self$byear_standard, (x - Mean[ndx])/STD[ndx])
   }
 
 ) ) ## End class definition

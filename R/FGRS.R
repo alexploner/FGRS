@@ -1,111 +1,191 @@
 #' Calculate the family genetic risk score
 #'
-#' Given information on persons of interest (probands) and their relatives,
-#' calculate the family genetic risk score (FGRS).
+#' Given persons of interest (probands) and genealogical and phenotypic information
+#' on their relatives, calculate the family genetic risk score (FGRS) for a
+#' with available population data.
 #'
-#' @param probands Data frame containing the proband information; see example
-#'                 data set `ex1$probands` for format.
-#' @param relatives Data frame containing information on relatives; see example
-#'                 data set `ex1$realtives` for format.
-#' @param proband_diag Diagnosis for the probands; currently, only `SZ` is valid.
-#' @param relatives_diag Diagnosis for the relatives; currently, only `SZ` is valid.
+#' @param probands Proband information; this is a data frame of any size containing
+#'                 two special columns:
 #'
-#' @return A list with two elements, `probands` and `relatives`, data frames
-#'         containing the input data and augmented by FGRS (`probands`) and
-#'         the components for calculating the FGRS (`relatives`)
+#'                 * ProbandID: a unique identifier column of any suitable type
+#'                 * BirthYear: integer, birth year of the proband (used for
+#'                              standardisation)
 #'
-#' @details Still early prototype, format of data / results may change.
+#' @param relatives Information on relatives; this is a data frame of any size
+#'                  containing these eight special columns:
+#'
+#'                  * ProbandID: the identifier for the proband the relative is
+#'                               related to, for matching with the `probands`
+#'                               data frame (i.e. should be same type); not unique.
+#'                  * RelativeID: identifiers for relatives; only unique within
+#'                                the same `ProbandID`-grouping (closest relationship
+#'                                to proband), but not in general (may related to
+#'                                multiple probands)
+#'                  * Sex: integer, sex of relative (1 = male, 2 = female)
+#'                  * BirthYear: numerical, birth year of the relative (used
+#'                               for liability estimation)
+#'                  * DiagYear: numerical, year of first diagnosis for the
+#'                              phenotype of interest; missing if no diagnosis
+#'                              during follow-up
+#'                  * AgeEOF: numerical, age of relative at end of follow-up
+#'                  * RelType: character, type of relative (currently recognized:
+#'                             M = mother, F = father, Sib = sibling)
+#'                  * SharedGenetics: numerical, proportion of genes shared
+#'                                    (on average) with proband
+#'
+#' @param phenotype An object of class `FGRS_data` containing the marginal
+#'                  population data required to calculate the FGRS for the
+#'                  phenotype of interest; alternatively, a character expression
+#'                  specifying one of the phenotypes included with the package,
+#'                  see Examples below.
+#'
+#' @return A data frame with five columns, containing FGRS values and intermediate
+#'         results from the FGRS calculations for all specified probands:
+#'
+#'         * ProbandID: unique identifier for probands, as specified in the column
+#'                      of the same name in argument `probands`
+#'         * nRelatives: number of relatives weighted by shared genetics (used in
+#'                       calculating shrinkage factors)
+#'         * crudeFGRS: average liability in relatives, weighted by age, shared
+#'                      genetics and cohabitation status; result of Step 5 in
+#'                      Kendler et al., Supp Table 2.
+#'         * shrunkFGRS: crude FGRS adjusted for (weighted) number of relatives
+#'                       by a shrinkage factor; result of Step 6 in Kendler et al.,
+#'                       Supp Table 2.
+#'         * FGRS: standardized shrunk FGRS (by birth year of proband), corresponding
+#'                 to result of final Step 7 in Kendler et al., Supp Table 2. This
+#'                 is the FGRS to be used for further investigations.
+#'
+#'         Note that the FGRS values here are *not* standardized by county of
+#'         longest residence.
+#'
+#'         The data frame has the same number of rows and order of probands as
+#'         argument `probands`, so the `FGRS`-column can be directly added to the
+#'         original data frame via `cbind` if the intermediate / relative-level
+#'         information is not of interest, see Examples.
+#'
+#'         The data frame also carries information on intermediate results of the
+#'         FGRS calculations on the relative level, i.e. before averaging across
+#'         relatives by proband. These intermediate results are intended for
+#'         diagnosis only, and are stored as attribute `FGRS_intermediate_relatives`,
+#'         which is a data frame with columns:
+
+#'        * ProbandID: identifier for the proband the relative is related to
+#'        * RelativeID: identifiers for relatives
+#'        * AgeWeight: liability weight for relative, based on sex, age and
+#'                     diagnostic status (phenotpye y/n) at end of follow-up;
+#'                     see Kendler et al., Supp Table 2, Step 1.
+#'        * CrudeLiab: estimated liability for relative, based on sex, birth year
+#'                     and diagnostic status (phenotpye y/n) at end of follow-up;
+#'                     see Kendler et al., Supp Table 2, Step 2.
+#'        * CohabWeight: correction factor for shared environmental factors
+#'                       through cohabitation; see Kendler et al., Supp Table 2,
+#'                       Step 3.
+#'        * LiabWeight: final liability weight for relative after combining
+#'                      crude liability, age weights, cohabitation weights and
+#'                      shared genetics; result of Step 4 in Kendler et al.,
+#'                      Supp Table 2.
+#'
+#'         Formally, the return value also inherits from S3 class `FGRS_result`,
+#'         but there are currently no methods defined for this class.
+#'
+#' @details Probands without relatives will lead to a warning and a missing value
+#'          for the corresponding FGRS.
+#'
+#'          Relatives unrelated to any specified proband will lead to a warning
+#'          and will dropped silently from any intermediate relative-level
+#'          calculations and results.
+#'
+#' @references Kendler, K., Ohlsson, H., Sundquist, J., & Sundquist, K. (2021).
+#' Impact of comorbidity on family genetic risk profiles for psychiatric and
+#' substance use disorders: A descriptive analysis. Psychological Medicine, 1-10.
+#' doi:10.1017/S0033291721004268
+#'
+#' @seealso \code{\link[FGRS]{FGRS_data}} \code{\link[FGRS]{ex1}}
 #' @import dplyr
 #' @export
 #' @examples
-#' FGRS(ex1$probands, ex1$relatives)
-FGRS <- function(probands, relatives, proband_diag = "SZ", relatives_diag = "SZ")
+#' sz <- FGRS(ex1$probands, ex1$relatives, phenotype = "SZ")
+#' sz
+#'
+#' # Add to original data
+#' cbind(ex1$probands, sz$FGRS)
+#'
+#' # Relative-level intermediate resuls
+#' attr(sz, "FGRS_intermediate_relatives")
+FGRS <- function(probands, relatives, phenotype)
 {
-  ## Hard-coded data definitions FIXME: S3 class or similar?
-  stopifnot( colnames(probands)  == colnames(FGRS::ex1$probands) )
-  stopifnot( colnames(relatives) == colnames(FGRS::ex1$relatives) )
-  stopifnot( proband_diag %in% fgrs_diseases)
-  stopifnot( relatives_diag %in% fgrs_diseases)
+  ## Find the specified phenotype
+  if (is.character(phenotype)) {
+    stopifnot( phenotype %in% names(FGRS_phenotypes) )
+    phenotype <- get(paste0(phenotype, "popdata"), asNamespace("FGRS"))
+  } else if (!inherits(phenotype, "FGRS_data")) {
+    stop("Phenotype needs to be character code or FGRS_data object")
+  }
 
-  ## Note: weight calculations for relatives are naive, i.e. we calculate
-  ## separately per row of data (ignoring the fact that relatives can appear
-  ## multiple times) - probably more efficient that compressing to uniqueness,
-  ## calculating and re-matching.
+  ## Use simple functions to do basic validation and simplification
+  probands  <- check_probands( probands )
+  relatives <- check_relatives( relatives )
 
-  probdat <- probands
-  reldat  <- relatives
+  ## Check the probands and relatives against each other
 
-  ## Calculate birth decades
-  brks <- c(fgrs_decades$Start[1], fgrs_decades$End)
-  ndx  <- findInterval(relatives$BirthYear, brks, left.open = TRUE)
-  reldat$BirthDecade <- fgrs_decades$BirthDecade[ndx]
-  ## Calculate disease status
-  reldat$HasDiag <- !is.na(reldat$AgeDiag)
+  ## Drop relatives without matching probands (for good)
+  rel <- subset(relatives, ProbandID %in% probands$ProbandID)
+  ## Drop probands without relatives (for calculation, see return value)
+  pro <- subset(probands, ProbandID %in% rel$ProbandID)
 
-  ## Step 1: weight based on age at end of follow-up (for relatives
-  ## without diagnosis)
-  ##
-  ## Relatives with their own diagnosis always get weight one; relatives without
-  ## diagnosis get as weight the cumulative incidence of the disease at their
-  ## age at end of follow-up, with a shift in age distribution for relatives born
-  ## before 1958
-  match_age <- with(reldat, ifelse(BirthYear >= 1958, AgeEOF, AgeEOF - (BirthYear - 1958)))
-  ## FIXME: we round the age at end of follow-up here to get integers; this is
-  ## because the generic example data uses fractional ages, but it's not clear
-  ## whether the original ages were rounded or truncated - probably the latter...
-  ## ... does it make a difference?
-  match_age <- round(match_age)
-  ndx <- match(match_age, fgrs_cuminc[[relatives_diag]]$Age)
-  stopifnot( !any(is.na(ndx)) )
-  reldat$age_weight <- ifelse( reldat$HasDiag, 1.0, fgrs_cuminc[[relatives_diag]]$PropDiag[ndx] )
+  ## Useful downstream
+  rel$has_diag <- as.numeric( !is.na(rel$DiagYear))
 
-  ## Step 2: liability weight based on period effects (birth decade)
-  ##
-  ## FIXME: this gives negative weights - is this intended? Seem risky when
-  ## multiplying this with the age weights
-  reldat <- merge(reldat, fgrs_meanliab[[relatives_diag]][, -(4:5)],
-                  by = c("Sex", "HasDiag", "BirthDecade"),
-                  sort = FALSE)
-  colnames(reldat)[ncol(reldat)] <- "period_weight"
+  ## Actual calculations
 
-  ## Step 3: cohabitation effects
-  reldat$cohab_weight <- ifelse( reldat$RelativeType %in% c("M", "F"),
-                                 fgrs_const[[relatives_diag]]$cohab$parent_child,
-                                 ifelse( reldat$RelativeType == "Sib",
-                                         fgrs_const[[relatives_diag]]$cohab$sibling,
-                                         1 )
-                                )
+  ## Step 1: age weights
+  age_weights <- with(rel, phenotype$get_age_weights(byear = BirthYear, sex = Sex,
+                                          age_eof = AgeEOF, has_diag = has_diag) )
 
-  ## Step 4: Calculate the pre-relative weight as product
-  reldat$weight <- with(reldat, age_weight * period_weight * cohab_weight * SharedGenetics)
+  ## Step 2: mean liabilities
+  mean_liab <- with(rel, phenotype$get_disease_liability(byear = BirthYear,
+                                                sex = Sex, has_diag = has_diag) )
 
-  ## Step 5: Aggregate over probands, link aggregates back to probands
-  aggw <- group_by(reldat, ProbandID) %>% summarise(weight=mean(weight), nrel=n())
-  probdat <- merge(probdat, aggw, by = "ProbandID", sort = FALSE)
+  ## Step 3: cohabitation factors
+  cohab_fac <- with(rel, phenotype$get_cohab_corrfac(rel_type = RelType) )
 
-  ## Step 6: adjust (shrink) based on number of relatives
-  probdat$shrink_fac <- fgrs_const[[relatives_diag]]$shrink_nrel(probdat$nrel)
-  probdat$weight_adj <- probdat$weight * probdat$shrink_fac
+  ## Step 4: multiply
+  total_liab <- age_weights * mean_liab * cohab_fac
 
-  ## Step 7: standardize by birth year
-  ##
-  ## This is a slight variant of the original algorithm, which standardized
-  ## by both birth year and county of longest residence. However, sensitivity
-  ## analyses reported in the supplement (eTable 7) show extremely high
-  ## correlation with the original score when using only YoB standardisation,
-  ## as well as slightly higher AUC for both SZ and BD, so after consultation
-  ## with Henrik O, were are going with this simpler standardisation
-  ndx <- match(probdat$BirthYear, fgrs_standconst[[proband_diag]]$Byear)
-  stopifnot( !any(is.na(ndx)) )
-  probdat$weight_adj_std <- with( fgrs_standconst[[proband_diag]],
-                                  (probdat$weight_adj - Mean[ndx]) / STD[ndx] )
+  ## Step 5: aggregate to proband level
+  crude_fgrs <- stats::aggregate(total_liab, list(rel$ProbandID), mean)[[2]]
+  wgt_nrel   <- stats::aggregate(rel$SharedGenetics, list(rel$ProbandID), sum)[[2]]
 
-  ## Reduce, resort data frames for output
-  probdat <- probdat[, c(colnames(probands), "nrel", "weight", "shrink_fac", "weight_adj", "weight_adj_std")]
-  reldat  <- reldat[, c(colnames(relatives), "age_weight", "period_weight", "cohab_weight", "weight")]
+  ## Step 6: calculate and applot the shrinkage factor for (weighted) family size
+  shrunk_fgrs <- crude_fgrs * phenotype$get_famsize_corrfac(wgt_nrel)
 
-  ## Return
-  list(probands = probdat, relatives = reldat)
+  ## Step 7: standardize the fgrs by birth year of proband
+  fgrs <- phenotype$standardize_fgrs(shrunk_fgrs, pro$BirthYear)
+
+  ## Build return object: we re-match to the full size of the original proband
+  ## frame (before possible exclusions)
+  ndx <- match(probands$ProbandID, pro$ProbandID)
+  ret <- data.frame(ProbandID  = probands$ProbandID,
+                    nRelatives = wgt_nrel,
+                    crudeFGRS  = crude_fgrs,
+                    shrunkFGRS = shrunk_fgrs,
+                    FGRS       = fgrs)
+
+  ## Put the relative-level intermediate results into a separate data frame and
+  ## add as an attribute
+  attr <- data.frame(ProbandID   = rel$ProbandID,
+                     RelativeID  = rel$RelativeID,
+                     AgeWeight   = age_weights,
+                     CrudeLiab   = total_liab,
+                     CohabWeight = cohab_fac,
+                     LiabWeight  = total_liab)
+  attr(ret, "FGRS_intermediate_relatives") <- attr
+
+  ## Formally, the return value has an extra S3 class
+  class(ret) <- c("data.frame", "FGRS_result")
+
+  ret
 }
 
 #' Check a data frame of probands or relatives for correctness

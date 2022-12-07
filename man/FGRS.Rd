@@ -4,31 +4,127 @@
 \alias{FGRS}
 \title{Calculate the family genetic risk score}
 \usage{
-FGRS(probands, relatives, proband_diag = "SZ", relatives_diag = "SZ")
+FGRS(probands, relatives, phenotype)
 }
 \arguments{
-\item{probands}{Data frame containing the proband information; see example
-data set \code{ex1$probands} for format.}
+\item{probands}{Proband information; this is a data frame of any size containing
+two special columns:
 
-\item{relatives}{Data frame containing information on relatives; see example
-data set \code{ex1$realtives} for format.}
+\if{html}{\out{<div class="sourceCode">}}\preformatted{            * ProbandID: a unique identifier column of any suitable type
+            * BirthYear: integer, birth year of the proband (used for
+                         standardisation)
+}\if{html}{\out{</div>}}}
 
-\item{proband_diag}{Diagnosis for the probands; currently, only \code{SZ} is valid.}
+\item{relatives}{Information on relatives; this is a data frame of any size
+containing these eight special columns:
 
-\item{relatives_diag}{Diagnosis for the relatives; currently, only \code{SZ} is valid.}
+\if{html}{\out{<div class="sourceCode">}}\preformatted{             * ProbandID: the identifier for the proband the relative is
+                          related to, for matching with the `probands`
+                          data frame (i.e. should be same type); not unique.
+             * RelativeID: identifiers for relatives; only unique within
+                           the same `ProbandID`-grouping (closest relationship
+                           to proband), but not in general (may related to
+                           multiple probands)
+             * Sex: integer, sex of relative (1 = male, 2 = female)
+             * BirthYear: numerical, birth year of the relative (used
+                          for liability estimation)
+             * DiagYear: numerical, year of first diagnosis for the
+                         phenotype of interest; missing if no diagnosis
+                         during follow-up
+             * AgeEOF: numerical, age of relative at end of follow-up
+             * RelType: character, type of relative (currently recognized:
+                        M = mother, F = father, Sib = sibling)
+             * SharedGenetics: numerical, proportion of genes shared
+                               (on average) with proband
+}\if{html}{\out{</div>}}}
+
+\item{phenotype}{An object of class \code{FGRS_data} containing the marginal
+population data required to calculate the FGRS for the
+phenotype of interest; alternatively, a character expression
+specifying one of the phenotypes included with the package,
+see Examples below.}
 }
 \value{
-A list with two elements, \code{probands} and \code{relatives}, data frames
-containing the input data and augmented by FGRS (\code{probands}) and
-the components for calculating the FGRS (\code{relatives})
+A data frame with five columns, containing FGRS values and intermediate
+results from the FGRS calculations for all specified probands:
+
+\if{html}{\out{<div class="sourceCode">}}\preformatted{    * ProbandID: unique identifier for probands, as specified in the column
+                 of the same name in argument `probands`
+    * nRelatives: number of relatives weighted by shared genetics (used in
+                  calculating shrinkage factors)
+    * crudeFGRS: average liability in relatives, weighted by age, shared
+                 genetics and cohabitation status; result of Step 5 in
+                 Kendler et al., Supp Table 2.
+    * shrunkFGRS: crude FGRS adjusted for (weighted) number of relatives
+                  by a shrinkage factor; result of Step 6 in Kendler et al.,
+                  Supp Table 2.
+    * FGRS: standardized shrunk FGRS (by birth year of proband), corresponding
+            to result of final Step 7 in Kendler et al., Supp Table 2. This
+            is the FGRS to be used for further investigations.
+
+    Note that the FGRS values here are *not* standardized by county of
+    longest residence.
+
+    The data frame has the same number of rows and order of probands as
+    argument `probands`, so the `FGRS`-column can be directly added to the
+    original data frame via `cbind` if the intermediate / relative-level
+    information is not of interest, see Examples.
+
+    The data frame also carries information on intermediate results of the
+    FGRS calculations on the relative level, i.e. before averaging across
+    relatives by proband. These intermediate results are intended for
+    diagnosis only, and are stored as attribute `FGRS_intermediate_relatives`,
+    which is a data frame with columns:
+   * ProbandID: identifier for the proband the relative is related to
+   * RelativeID: identifiers for relatives
+   * AgeWeight: liability weight for relative, based on sex, age and
+                diagnostic status (phenotpye y/n) at end of follow-up;
+                see Kendler et al., Supp Table 2, Step 1.
+   * CrudeLiab: estimated liability for relative, based on sex, birth year
+                and diagnostic status (phenotpye y/n) at end of follow-up;
+                see Kendler et al., Supp Table 2, Step 2.
+   * CohabWeight: correction factor for shared environmental factors
+                  through cohabitation; see Kendler et al., Supp Table 2,
+                  Step 3.
+   * LiabWeight: final liability weight for relative after combining
+                 crude liability, age weights, cohabitation weights and
+                 shared genetics; result of Step 4 in Kendler et al.,
+                 Supp Table 2.
+
+    Formally, the return value also inherits from S3 class `FGRS_result`,
+    but there are currently no methods defined for this class.
+}\if{html}{\out{</div>}}
 }
 \description{
-Given information on persons of interest (probands) and their relatives,
-calculate the family genetic risk score (FGRS).
+Given persons of interest (probands) and genealogical and phenotypic information
+on their relatives, calculate the family genetic risk score (FGRS) for a
+with available population data.
 }
 \details{
-Still early prototype, format of data / results may change.
+Probands without relatives will lead to a warning and a missing value
+for the corresponding FGRS.
+
+\if{html}{\out{<div class="sourceCode">}}\preformatted{     Relatives unrelated to any specified proband will lead to a warning
+     and will dropped silently from any intermediate relative-level
+     calculations and results.
+}\if{html}{\out{</div>}}
 }
 \examples{
-FGRS(ex1$probands, ex1$relatives)
+sz <- FGRS(ex1$probands, ex1$relatives, phenotype = "SZ")
+sz
+
+# Add to original data
+cbind(ex1$probands, sz$FGRS)
+
+# Relative-level intermediate resuls
+attr(sz, "FGRS_intermediate_relatives")
+}
+\references{
+Kendler, K., Ohlsson, H., Sundquist, J., & Sundquist, K. (2021).
+Impact of comorbidity on family genetic risk profiles for psychiatric and
+substance use disorders: A descriptive analysis. Psychological Medicine, 1-10.
+doi:10.1017/S0033291721004268
+}
+\seealso{
+\code{\link[FGRS]{FGRS_data}} \code{\link[FGRS]{ex1}}
 }

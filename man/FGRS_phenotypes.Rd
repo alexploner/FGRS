@@ -3,12 +3,22 @@
 \docType{data}
 \name{FGRS_phenotypes}
 \alias{FGRS_phenotypes}
+\alias{SZpopdata}
+\alias{BDpopdata}
 \title{Population data for disease phenotypes}
 \format{
 An object of class \code{character} of length 2.
+
+An object of class \code{FGRS_data} (inherits from \code{R6}) of length 17.
+
+An object of class \code{FGRS_data} (inherits from \code{R6}) of length 17.
 }
 \usage{
 FGRS_phenotypes
+
+SZpopdata
+
+BDpopdata
 }
 \description{
 The FGRS package provides the background population data required for
@@ -29,8 +39,8 @@ FGRS_phenotypes
 names(FGRS_phenotypes)
 
 # These are two supported phenotypes
-SZpopdat
-BDpopdat
+SZpopdata
+BDpopdata
 }
 \references{
 Kendler, K., Ohlsson, H., Sundquist, J., & Sundquist, K. (2021b).

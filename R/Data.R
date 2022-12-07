@@ -28,9 +28,16 @@
 #' names(FGRS_phenotypes)
 #'
 #' # These are two supported phenotypes
-#' SZpopdat
-#' BDpopdat
+#' SZpopdata
+#' BDpopdata
 "FGRS_phenotypes"
+
+#' @rdname FGRS_phenotypes
+"SZpopdata"
+
+#' @rdname FGRS_phenotypes
+"BDpopdata"
+
 
 #' Example proband and relative data
 #'

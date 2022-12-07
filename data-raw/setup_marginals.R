@@ -100,3 +100,4 @@ BDpopdata <- FGRS_data$new(name              = "BD",
 
 #' Add the generated objects to the package
 usethis::use_data(FGRS_phenotypes, SZpopdata, BDpopdata, overwrite = TRUE)
+

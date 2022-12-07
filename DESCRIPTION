@@ -1,6 +1,6 @@
 Package: FGRS
 Title: Calculate the Kendler-Ohlsson Family Genetic Risk Score
-Version: 0.0.0.9200
+Version: 0.0.0.9500
 Authors@R: 
     person("Alexander", "Ploner", , "alexander.ploner@ki.se", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0002-5042-8326"))
