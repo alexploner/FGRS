@@ -31,3 +31,20 @@
 #' SZpopdat
 #' BDpopdat
 "FGRS_phenotypes"
+
+#' Example proband and relative data
+#'
+#' This is a very small example of probands (for whom we want to calculate
+#' an FGRS) and their relatives (whose information is used to calculate
+#' the FGRS).
+#'
+#' @format This is a list with two entries, `probands` and `relatives`. These
+#'         entries are data frames with columns as required by function `FGRS`
+#'         (and documented there).
+#'
+#' @seealso \code{\link[FGRS]{FGRS}}
+#' @examples
+#' ex1
+#'
+#' FGRS(ex1$probands, ex1$relatives, phenotype = SZpopdata)
+"ex1"
