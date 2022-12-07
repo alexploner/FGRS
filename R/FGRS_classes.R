@@ -156,7 +156,7 @@ FGRS_data <- R6::R6Class("FGRS_data", public = list(
 
     ## Populate the object: just copying over
     self$disease <- name
-    self$birth_decades <- bith_decades
+    self$birth_decades <- birth_decades
     self$age_case_cuminc <- age_case_cuminc
     self$byear_standard  <- byear_standard
     self$cohab_parent_child <- cohab[["parent_child"]]
@@ -172,7 +172,7 @@ FGRS_data <- R6::R6Class("FGRS_data", public = list(
     ml <- ml[, c("BirthDecade", "Sex", "HasDiag", "MeanLiab", "LiabThresh")]
     ## Add the prevalence (for plotting etc.)
     ml$Prev <- pnorm(ml$LiabThresh, lower.tail = FALSE)
-    self$Bdecade_liability <- ml
+    self$bdecade_liability <- ml
 
     ## ... aaaand we're done
     invisible(self)
