@@ -93,7 +93,7 @@
 #'          for the corresponding FGRS.
 #'
 #'          Relatives unrelated to any specified proband will lead to a warning
-#'          and will dropped silently from any intermediate relative-level
+#'          and will be dropped silently from any intermediate relative-level
 #'          calculations and results.
 #'
 #' @references Kendler, K., Ohlsson, H., Sundquist, J., & Sundquist, K. (2021).
@@ -162,10 +162,10 @@ FGRS <- function(probands, relatives, phenotype)
   ## frame (before possible exclusions)
   ndx <- match(probands$ProbandID, pro$ProbandID)
   ret <- data.frame(ProbandID  = probands$ProbandID,
-                    nRelatives = wgt_nrel,
-                    crudeFGRS  = crude_fgrs,
-                    shrunkFGRS = shrunk_fgrs,
-                    FGRS       = fgrs)
+                    nRelatives = wgt_nrel[ndx],
+                    crudeFGRS  = crude_fgrs[ndx],
+                    shrunkFGRS = shrunk_fgrs[ndx],
+                    FGRS       = fgrs[ndx])
 
   ## Put the relative-level intermediate results into a separate data frame and
   ## add as an attribute
