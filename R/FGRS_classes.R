@@ -43,7 +43,7 @@ FGRS_data <- R6::R6Class("FGRS_data", public = list(
   age_case_cuminc = NULL,
 
   #' @field bdecade_liability Data frame with six numerical columns, listing
-  #'        mean libability for the disease of interest by birth decade, sex and
+  #'        mean liability for the disease of interest by birth decade, sex and
   #'        disease status at end of follow-up; ; see Kendler et al. 2021(b),
   #'        Supplemental Table 2, Step 2.
   #'
@@ -65,7 +65,7 @@ FGRS_data <- R6::R6Class("FGRS_data", public = list(
   #'                  included for description.
   bdecade_liability = NULL,
 
-  #' @field cohab_parent_child,cohab_sibling Numerical vectors of lenght one,
+  #' @field cohab_parent_child,cohab_sibling Numerical vectors of length one,
   #'        storing the correction factors for cohabitation effects (shared
   #'        environment) for parent-child and sibling-sibling relationships;
   #'        see Kendler et al. 2021(b), Supplemental Table 2, Step 3.
@@ -164,7 +164,7 @@ FGRS_data <- R6::R6Class("FGRS_data", public = list(
     self$shrinkage_A        <- shrinkage["A"]
     self$shrinkage_B        <- shrinkage["B"]
 
-    ## Expand the mean liabilities to cases and controls: mean libability
+    ## Expand the mean liabilities to cases and controls: mean liability
     ## above and below the threshold
     ml <- list("0" = transform(bdecade_liability, MeanLiab = truncnorm::etruncnorm(a = -Inf, b = LiabThresh)),
                "1" = transform(bdecade_liability, MeanLiab = truncnorm::etruncnorm(a = LiabThresh, b = Inf))
