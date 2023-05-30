@@ -116,12 +116,7 @@
 FGRS <- function(probands, relatives, phenotype)
 {
   ## Find the specified phenotype
-  if (is.character(phenotype)) {
-    stopifnot( phenotype %in% names(FGRS_phenotypes) )
-    phenotype <- get(paste0(phenotype, "popdata"), asNamespace("FGRS"))
-  } else if (!inherits(phenotype, "FGRS_data")) {
-    stop("Phenotype needs to be character code or FGRS_data object")
-  }
+  phenotype <- check_phenotype(phenotype)
 
   ## Use simple functions to do basic validation and simplification
   probands  <- check_probands( probands )
@@ -192,7 +187,7 @@ FGRS <- function(probands, relatives, phenotype)
 #'
 #' Given data frames that contain information on either probands or relatives
 #' as required by function `FGRS`, this function runs some minimal checks on
-#' correctness and returns the subset of coumns required to calculate the FGRS.
+#' correctness and returns the subset of columns required to calculate the FGRS.
 #'
 #' @seealso \code{\link[FGRS]{FGRS}}
 check_probands <- function(x, id = "ProbandID", byear = "BirthYear")
@@ -247,3 +242,26 @@ check_relatives <- function(x, id = "ProbandID", id2 = "RelativeID",
   x
 }
 
+#' Check a specified phenotype
+#'
+#' Given either a name or an object, this function checks whether a built-in
+#' data object for the name exists, or whether the object inherits from a
+#' valid phenotype structure. If yes, the correct phenotype is returned,
+#' otherwise an error is thrown.
+#'
+#' @param phenotype Either a character vector of length one (i.e. a name) or
+#'                  an object inheriting from class `FGRS_data`
+#'
+#' @return An object of class `FGRS_data`
+#'
+#' @seealso \code{\link[FGRS]{FGRS}} \code{\link[FGRS]{check_probands}} \code{\link[FGRS]{FGRS_data}}
+check_phenotype <- function(phenotype)
+{
+  if (is.character(phenotype)) {
+    stopifnot( phenotype %in% names(FGRS_phenotypes) )
+    phenotype <- get(paste0(phenotype, "popdata"), asNamespace("FGRS"))
+  } else if (!inherits(phenotype, "FGRS_data")) {
+    stop("Phenotype needs to be character code or FGRS_data object")
+  }
+  phenotype
+}

@@ -12,7 +12,7 @@
 #' substance use disorders: A descriptive analysis. Psychological Medicine, 1-10.
 #' doi:10.1017/S0033291721004268
 #'
-#' @import R6
+#' @import R6 dplyr
 #' @export
 FGRS_data <- R6::R6Class("FGRS_data", public = list(
 

@@ -22,7 +22,7 @@ check_relatives(
 \description{
 Given data frames that contain information on either probands or relatives
 as required by function \code{FGRS}, this function runs some minimal checks on
-correctness and returns the subset of coumns required to calculate the FGRS.
+correctness and returns the subset of columns required to calculate the FGRS.
 }
 \seealso{
 \code{\link[FGRS]{FGRS}}
