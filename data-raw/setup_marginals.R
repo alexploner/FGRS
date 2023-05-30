@@ -73,13 +73,6 @@ shrink <- get_constants("Shrinkage.txt")
 
 #' Schizophrenia
 tmp <- get_pheno_data("SZ")
-#' Non-monotonous cumulative incidence, see
-#' library(ggplot)
-#' ggplot(tmp$cuminc, aes(x=Age, y = PropDiag, linetype = factor(Sex), group = Sex)) + geom_line()
-#'
-#' Fix this: simple cumulative max
-tmp$cuminc$PropDiag <- with(tmp$cuminc, unlist(tapply(PropDiag, Sex, cummax)))
-#' Do the object
 SZpopdata <- FGRS_data$new(name              = "SZ",
                            birth_decades     = FGRS_decades,
                            age_case_cuminc   = tmp$cuminc,

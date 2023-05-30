@@ -45,7 +45,7 @@ for registration effects).
 }\if{html}{\out{</div>}}}
 
 \item{\code{bdecade_liability}}{Data frame with six numerical columns, listing
-mean libability for the disease of interest by birth decade, sex and
+mean liability for the disease of interest by birth decade, sex and
 disease status at end of follow-up; ; see Kendler et al. 2021(b),
 Supplemental Table 2, Step 2.
 
@@ -67,7 +67,7 @@ Supplemental Table 2, Step 2.
              included for description.
 }\if{html}{\out{</div>}}}
 
-\item{\code{cohab_parent_child, cohab_sibling}}{Numerical vectors of lenght one,
+\item{\code{cohab_parent_child, cohab_sibling}}{Numerical vectors of length one,
 storing the correction factors for cohabitation effects (shared
 environment) for parent-child and sibling-sibling relationships;
 see Kendler et al. 2021(b), Supplemental Table 2, Step 3.}
@@ -93,7 +93,7 @@ of longest residence.
 \section{Active bindings}{
 \if{html}{\out{<div class="r6-active-bindings">}}
 \describe{
-\item{\code{cohab_parent_child, cohab_sibling}}{Numerical vectors of lenght one,
+\item{\code{cohab_parent_child, cohab_sibling}}{Numerical vectors of length one,
 storing the correction factors for cohabitation effects (shared
 environment) for parent-child and sibling-sibling relationships;
 see Kendler et al. 2021(b), Supplemental Table 2, Step 3.}
