@@ -2,9 +2,12 @@
 % Please edit documentation in R/FGRS.R
 \name{cumulativeFGRS}
 \alias{cumulativeFGRS}
+\alias{leaveoneoutFGRS}
 \title{Calculate partial family genetic risk scores}
 \usage{
 cumulativeFGRS(probands, relatives, phenotype)
+
+leaveoneoutFGRS(probands, relatives, phenotype)
 }
 \arguments{
 \item{probands}{Proband information, same as for \code{FGRS}}

@@ -3,5 +3,6 @@
 export(FGRS)
 export(FGRS_data)
 export(cumulativeFGRS)
+export(leaveoneoutFGRS)
 import(R6)
 import(dplyr)

@@ -404,5 +404,83 @@ cumulativeFGRS <- function(probands, relatives, phenotype)
   ret
 }
 
+#' @rdname cumulativeFGRS
+#' @export
+leaveoneoutFGRS <- function(probands, relatives, phenotype)
+{
+  ## Find the specified phenotype
+  phenotype <- check_phenotype(phenotype)
+
+  ## Use simple functions to do basic validation and simplification
+  probands  <- check_probands( probands )
+  relatives <- check_relatives( relatives )
+
+  ## Check the probands and relatives against each other
+
+  ## Drop relatives without matching probands (for good)
+  rel <- subset(relatives, ProbandID %in% probands$ProbandID)
+  ## Drop probands without relatives (for calculation, see return value)
+  pro <- subset(probands, ProbandID %in% rel$ProbandID)
+
+  ## Useful downstream
+  rel$has_diag <- as.numeric( !is.na(rel$DiagYear))
+
+  ## The FGRS container
+  allFGRS <- matrix(0, nrow = nrow(pro), ncol = 5)
+  colnames(allFGRS) <- paste0("looFGRS", 1:5)
+
+  ## Step 0: mean liabilities (always there)
+  fgrs0 <- with(rel, phenotype$get_disease_liability(byear = BirthYear,
+                                                     sex = Sex, has_diag = has_diag) )
+
+  ## Loop and skip
+  for (i in 1:5) {
+
+    ## Initialize properly
+    fgrs_tmp <- fgrs0
+
+    ## Step 1: age weights
+    if (i != 1) {
+      fgrs_tmp <- fgrs_tmp * with(rel, phenotype$get_age_weights(byear = BirthYear, sex = Sex,
+                                                             age_eof = AgeEOF, has_diag = has_diag) )
+    }
+
+    ## Step 2: shared genetics
+    if (i != 2) {
+      fgrs_tmp <- fgrs_tmp * rel$SharedGenetics
+    }
+    ## Step 3: cohabitation factors
+    if (i != 3) {
+      fgrs_tmp  <- fgrs_tmp * with(rel, phenotype$get_cohab_corrfac(rel_type = RelType) )
+    }
+
+    ## Intermediate step: we continue with the aggregated FGRS (proband level, ALWAYS)
+    fgrs_tmp <- stats::aggregate(fgrs_tmp, list(rel$ProbandID), mean)[[2]]
+
+    ## Step 4: shrink by (weighted) family size
+    if (i != 4) {
+      wgt_nrel <- stats::aggregate(rel$SharedGenetics, list(rel$ProbandID), sum)[[2]]
+      fgrs_tmp <- fgrs_tmp * phenotype$get_famsize_corrfac(wgt_nrel)
+    }
+
+    ## Step 5: calculate and applot the shrinkage factor for (weighted) family size
+    if (i != 5) {
+      fgrs_tmp <- phenotype$standardize_fgrs(fgrs_tmp, pro$BirthYear)
+    }
+
+    allFGRS[, i] <- fgrs_tmp
+
+  }
+
+  ## Build return object: we re-match to the full size of the original proband
+  ## frame (before possible exclusions)
+  ndx <- match(probands$ProbandID, pro$ProbandID)
+  ret <- data.frame(ProbandID  = probands$ProbandID,
+                    nRelatives = wgt_nrel[ndx] )
+
+  ret <- cbind(ret, allFGRS[ndx, ])
+  ret
+}
+
 
 
