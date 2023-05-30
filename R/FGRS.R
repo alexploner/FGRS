@@ -146,7 +146,7 @@ FGRS <- function(probands, relatives, phenotype)
   cohab_fac <- with(rel, phenotype$get_cohab_corrfac(rel_type = RelType) )
 
   ## Step 4: multiply
-  total_liab <- age_weights * mean_liab * cohab_fac
+  total_liab <- age_weights * mean_liab * cohab_fac * rel$SharedGenetics
 
   ## Step 5: aggregate to proband level
   crude_fgrs <- stats::aggregate(total_liab, list(rel$ProbandID), mean)[[2]]
