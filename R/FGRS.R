@@ -265,3 +265,144 @@ check_phenotype <- function(phenotype)
   }
   phenotype
 }
+
+
+#' Calculate partial family genetic risk scores
+#'
+#' Calculate variant FGRS by skipping one or several steps of the full FGRS
+#' algorithm: `cumulativeGFRS` calculates partial FGRS by performing steps in
+#' order, but terminating before the end; `leaveoneoutFGRS` calculates incomplete
+#' FGRS by skipping each step of the algorithm in turn. Both functions return
+#' a series of FGRS variants that can be used to study the properties of the
+#' full FGRS, e.g. as a sensitivity analysis.
+#'
+#' @param probands Proband information, same as for `FGRS`
+#'
+#' @param relatives Information on relatives; same as for `FGRS`
+#'
+#' @param phenotype An object of class `FGRS_data` containing the marginal
+#'                  population data required to calculate the FGRS, same as for
+#'                  `FGRS`.
+#'
+#' @return A data frame with either eight or seven columns, containing proband
+#'         IDs, weighted nubmer of relatives and six variant FGRS scores
+#'
+#'         * `ProbandID`: unique identifier for probands, as specified in argument
+#'                       `probands`
+#'         * `nRelatives`: number of relatives weighted by shared genetics
+#'         * Either six or five variant FGRS scores, called either `cumFGRS0` to
+#'           `cumFGRS5` or `looFGRS1` to `looFGRS5`, depending on function;
+#'            see Details.
+#'
+#'          Probands without relatives will lead to a warning and a missing value
+#'          for the corresponding FGRS. Relatives unrelated to any specified
+#'          proband will lead to a warning and will be dropped.
+#'
+#'         This data frame does _not_ carry information on intermediate results
+#'         on the relative level, as in `FGRS`
+#'
+#' @details For the purpose of these functions, the FGRS is calculated in six steps,
+#'          numbered 0-5:
+#'
+#'          0. Calculation of raw liabilities based on sex and birth decade
+#'             of relative
+#'          1. Age correction based on sex, age and disease status at end of
+#'             follow-up (in relatives)
+#'          2. Correction for genetic relatedness to proband (in relatives)
+#'          3. Correction for cohabitation (in relatives)
+#'          4. Shrinkage based on family size (in probands)
+#'          5. Standardization based on birth year (in probands)
+#'
+#'          Note that this is not the same order of steps as in the reference
+#'          below, but makes more sense like this here.
+#'
+#'          Note that the algorithm includes an averaging step between Steps 3
+#'          and 4 above when going from relatives to probands. This is necessary
+#'          and will always be run.
+#'
+#'          `cumFGRS0` represents the raw liability for disease among relatives;
+#'          `cumFGRS1` to `cumFGRS5` represent the output from the algorithm after
+#'          running the 1st to 5th step of the algorithm - consequently,
+#'          `cumFGRS5` is just the full FGRS again.
+#'
+#'          `looFGRS1` to `looFGRS5` represent the output from the FGRS algorithm
+#'          when skipping the the 1st to 5th step.
+#'
+#' @references Kendler, K., Ohlsson, H., Sundquist, J., & Sundquist, K. (2021).
+#' Impact of comorbidity on family genetic risk profiles for psychiatric and
+#' substance use disorders: A descriptive analysis. Psychological Medicine, 1-10.
+#' doi:10.1017/S0033291721004268
+#'
+#' @seealso \code{\link[FGRS]{FGRS}}
+#' @export
+#' @examples
+#' sz_cum <- cumulativeFGRS(ex1$probands, ex1$relatives, phenotype = "SZ")
+#' sz_cum
+#'
+#' sz_loo <- leaveoneoutFGRS(ex1$probands, ex1$relatives, phenotype = "SZ")
+#' sz_loo
+cumulativeFGRS <- function(probands, relatives, phenotype)
+{
+  ## Find the specified phenotype
+  phenotype <- check_phenotype(phenotype)
+
+  ## Use simple functions to do basic validation and simplification
+  probands  <- check_probands( probands )
+  relatives <- check_relatives( relatives )
+
+  ## Check the probands and relatives against each other
+
+  ## Drop relatives without matching probands (for good)
+  rel <- subset(relatives, ProbandID %in% probands$ProbandID)
+  ## Drop probands without relatives (for calculation, see return value)
+  pro <- subset(probands, ProbandID %in% rel$ProbandID)
+
+  ## Useful downstream
+  rel$has_diag <- as.numeric( !is.na(rel$DiagYear))
+
+  ## The FGRS container
+  allFGRS <- matrix(0, nrow = nrow(pro), ncol = 6)
+  colnames(allFGRS) <- paste0("cumFGRS", 0:5)
+
+  ## Step 0: mean liabilities
+  fgrs_tmp <- with(rel, phenotype$get_disease_liability(byear = BirthYear,
+                                                        sex = Sex, has_diag = has_diag) )
+  allFGRS[ ,1] <- stats::aggregate(fgrs_tmp, list(rel$ProbandID), mean)[[2]]
+
+  ## Step 1: age weights
+  fgrs_tmp <- fgrs_tmp * with(rel, phenotype$get_age_weights(byear = BirthYear, sex = Sex,
+                                                   age_eof = AgeEOF, has_diag = has_diag) )
+  allFGRS[ ,2] <- stats::aggregate(fgrs_tmp, list(rel$ProbandID), mean)[[2]]
+
+  ## Step 2: shared genetics
+  fgrs_tmp <- fgrs_tmp * rel$SharedGenetics
+  allFGRS[ ,3] <- stats::aggregate(fgrs_tmp, list(rel$ProbandID), mean)[[2]]
+
+  ## Step 3: cohabitation factors
+  fgrs_tmp  <- fgrs_tmp * with(rel, phenotype$get_cohab_corrfac(rel_type = RelType) )
+  allFGRS[ ,4] <- stats::aggregate(fgrs_tmp, list(rel$ProbandID), mean)[[2]]
+
+  ## Intermediate step: we continue with the aggregated FGRS (proband level)
+  fgrs_tmp <- allFGRS[ ,4]
+
+  ## Step 4: shrink by (weighted) family size
+  wgt_nrel <- stats::aggregate(rel$SharedGenetics, list(rel$ProbandID), sum)[[2]]
+  fgrs_tmp <- fgrs_tmp * phenotype$get_famsize_corrfac(wgt_nrel)
+  allFGRS[ ,5] <- fgrs_tmp
+
+  ## Step 5: calculate and applot the shrinkage factor for (weighted) family size
+  fgrs_tmp <- phenotype$standardize_fgrs(fgrs_tmp, pro$BirthYear)
+  allFGRS[ ,6] <- fgrs_tmp
+
+  ## Build return object: we re-match to the full size of the original proband
+  ## frame (before possible exclusions)
+  ndx <- match(probands$ProbandID, pro$ProbandID)
+  ret <- data.frame(ProbandID  = probands$ProbandID,
+                    nRelatives = wgt_nrel[ndx] )
+
+  ret <- cbind(ret, allFGRS[ndx, ])
+  ret
+}
+
+
+

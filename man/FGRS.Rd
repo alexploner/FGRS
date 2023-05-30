@@ -105,7 +105,7 @@ Probands without relatives will lead to a warning and a missing value
 for the corresponding FGRS.
 
 \if{html}{\out{<div class="sourceCode">}}\preformatted{     Relatives unrelated to any specified proband will lead to a warning
-     and will dropped silently from any intermediate relative-level
+     and will be dropped silently from any intermediate relative-level
      calculations and results.
 }\if{html}{\out{</div>}}
 }
